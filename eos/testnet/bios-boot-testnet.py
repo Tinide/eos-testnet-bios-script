@@ -90,10 +90,17 @@ def importKeys():
             keys[key] = True
             run(args.cleos + 'wallet import --private-key ' + key)
 
-def startNode(nodeIndex, account):
+def remkNodeDir(nodeIndex, account):
     dir = args.nodes_dir + ('%02d-' % nodeIndex) + account['name'] + '/'
     run('rm -rf ' + dir)
     run('mkdir -p ' + dir)
+
+def remkNodeDirs(b, e):
+    for i in range(b, e):
+        remkNodeDir(i - b + 1, accounts[i])
+
+def startNode(nodeIndex, account):
+    dir = args.nodes_dir + ('%02d-' % nodeIndex) + account['name'] + '/'
     otherOpts = ''.join(list(map(lambda i: '    --p2p-peer-address localhost:' + str(9000 + i), range(nodeIndex))))
     if not nodeIndex: otherOpts += (
         '    --plugin eosio::history_plugin'
@@ -304,6 +311,9 @@ def stepRegProducers():
     regProducers(firstProducer, firstProducer + numProducers)
     sleep(1)
     listProducers()
+def stepReMKNodeDirs():
+    remkNodeDirs(firstProducer, firstProducer + numProducers)
+    sleep(0.5)
 def stepStartProducers():
     startProducers(firstProducer, firstProducer + numProducers)
     sleep(args.producer_sync_delay)
@@ -339,6 +349,7 @@ commands = [
     ('I', 'init-sys-contract',  stepInitSystemContract,     True,    "Initialiaze system contract"),
     ('T', 'stake',              stepCreateStakedAccounts,   True,    "Create staked accounts"),
     ('p', 'reg-prod',           stepRegProducers,           True,    "Register producers"),
+    ('r', 're-make-dir',        stepReMKNodeDirs,           True,    "Delete node dir and remake dir"),
     ('P', 'start-prod',         stepStartProducers,         True,    "Start producers"),
     ('v', 'vote',               stepVote,                   True,    "Vote for producers"),
     ('R', 'claim',              claimRewards,               True,    "Claim rewards"),
