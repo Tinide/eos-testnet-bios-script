@@ -105,3 +105,6 @@ venv.bak/
 
 \.idea/
 \.vscode/
+
+eos/testnet/wallet/
+eos/testnet/nodes/
