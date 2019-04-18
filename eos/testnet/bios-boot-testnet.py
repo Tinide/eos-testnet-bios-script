@@ -32,15 +32,15 @@ def jsonArg(a):
     return " '" + json.dumps(a) + "' "
 
 def run(args):
-    print('bios-boot-tutorial.py:', args)
+    print('bios-boot-testnet.py:', args)
     logFile.write(args + '\n')
     if subprocess.call(args, shell=True):
-        print('bios-boot-tutorial.py: exiting because of error')
+        print('bios-boot-testnet.py: exiting because of error')
         sys.exit(1)
 
 def retry(args):
     while True:
-        print('bios-boot-tutorial.py:', args)
+        print('bios-boot-testnet.py:', args)
         logFile.write(args + '\n')
         if subprocess.call(args, shell=True):
             print('*** Retry')
@@ -48,12 +48,12 @@ def retry(args):
             break
 
 def background(args):
-    print('bios-boot-tutorial.py:', args)
+    print('bios-boot-testnet.py:', args)
     logFile.write(args + '\n')
     return subprocess.Popen(args, shell=True)
 
 def getOutput(args):
-    print('bios-boot-tutorial.py:', args)
+    print('bios-boot-testnet.py:', args)
     logFile.write(args + '\n')
     proc = subprocess.Popen(args, shell=True, stdout=subprocess.PIPE)
     return proc.communicate()[0].decode('utf-8')
@@ -410,4 +410,4 @@ for (flag, command, function, inAll, help) in commands:
             haveCommand = True
             function()
 if not haveCommand:
-    print('bios-boot-tutorial.py: Tell me what to do. -a does almost everything. -h shows options.')
+    print('bios-boot-testnet.py: Tell me what to do. -a does almost everything. -h shows options.')
