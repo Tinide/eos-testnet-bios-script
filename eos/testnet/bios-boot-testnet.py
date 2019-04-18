@@ -101,6 +101,7 @@ def remkNodeDirs(b, e):
 
 def startNode(nodeIndex, account):
     dir = args.nodes_dir + ('%02d-' % nodeIndex) + account['name'] + '/'
+    logFileName = ('bp%02d_' % nodeIndex) + account['name'] + ".log"
     otherOpts = ''.join(list(map(lambda i: '    --p2p-peer-address localhost:' + str(9000 + i), range(nodeIndex))))
     if not nodeIndex: otherOpts += (
         '    --plugin eosio::history_plugin'
@@ -126,9 +127,9 @@ def startNode(nodeIndex, account):
         '    --plugin eosio::chain_api_plugin'
         '    --plugin eosio::producer_plugin' +
         otherOpts)
-    with open(dir + 'stderr', mode='w') as f:
+    with open(dir + '../' + logFileName, mode='w') as f:
         f.write(cmd + '\n\n')
-    background(cmd + '    2>>' + dir + 'stderr')
+    background(cmd + '    2>>' + dir + '../' + logFileName)
 
 def startProducers(b, e):
     for i in range(b, e):
@@ -334,7 +335,7 @@ def stepTransfer():
     while True:
         randomTransfer(0, args.num_senders)
 def stepLog():
-    run('tail -n 60 ' + args.nodes_dir + '00-eosio/stderr')
+    run('tail -n 60 ' + args.nodes_dir + 'bp00_eosio.log')
 
 # Command Line Arguments
 
