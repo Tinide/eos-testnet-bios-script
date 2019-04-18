@@ -288,7 +288,9 @@ def stepStartWallet():
     startWallet()
     importKeys()
 def stepStartBoot():
-    startNode(0, {'name': 'eosio', 'pvt': args.private_key, 'pub': args.public_key})
+    bootParams = {'name': 'eosio', 'pvt': args.private_key, 'pub': args.public_key}
+    remkNodeDir(0, bootParams)
+    startNode(0, bootParams)
     sleep(1.5)
 def stepInstallSystemContracts():
     run(args.cleos + 'set contract eosio.token ' + args.contracts_dir + '/eosio.token/')
@@ -362,9 +364,10 @@ commands = [
 
 parser.add_argument('--public-key', metavar='', help="EOSIO Public Key", default='EOS8Znrtgwt8TfpmbVpTKvA2oB8Nqey625CLN8bCN3TEbgx86Dsvr', dest="public_key")
 parser.add_argument('--private-Key', metavar='', help="EOSIO Private Key", default='5K463ynhZoCDDa4RDcr63cUwWLTnKqmdcoTKTHBjqoKfv4u5V7p', dest="private_key")
-parser.add_argument('--cleos', metavar='', help="Cleos command", default='../../build/programs/cleos/cleos --wallet-url http://127.0.0.1:6666 ')
-parser.add_argument('--nodeos', metavar='', help="Path to nodeos binary", default='../../build/programs/nodeos/nodeos')
-parser.add_argument('--keosd', metavar='', help="Path to keosd binary", default='../../build/programs/keosd/keosd')
+parser.add_argument('--root', metavar='', help="The root path for eos project", default='')
+parser.add_argument('--cleos', metavar='', help="Cleos command", default='')
+parser.add_argument('--nodeos', metavar='', help="Path to nodeos binary", default='')
+parser.add_argument('--keosd', metavar='', help="Path to keosd binary", default='')
 parser.add_argument('--contracts-dir', metavar='', help="Path to contracts directory", default='../../build/contracts/')
 parser.add_argument('--nodes-dir', metavar='', help="Path to nodes directory", default='./nodes/')
 parser.add_argument('--genesis', metavar='', help="Path to genesis.json", default="./genesis.json")
@@ -385,6 +388,34 @@ parser.add_argument('--producer-sync-delay', metavar='', help="Time (s) to sleep
 parser.add_argument('-a', '--all', action='store_true', help="Do everything marked with (*)")
 parser.add_argument('-H', '--http-port', type=int, default=8000, metavar='', help='HTTP port for cleos')
 
+def processPath( args ):
+    # process path
+    root_path = ""
+    if (not os.environ["eosio_DIR"] is None) and (not os.environ["eosio_DIR"] is ""):
+        root_path = os.environ["eosio_DIR"]
+        print("eosio_DIR is ", root_path)
+
+    if not (args.root is ""):
+        root_path = args.root
+        print("use root param ", root_path)
+
+    if (root_path is "") and ((args.cleos is "") or (args.nodeos is "") or (args.keosd is "")):
+        print("root path no select and --cleos, --nodeos, --keosd has no set")
+        print("USE --root or 'export eosio_DIR=\"/path/to/eos/build/\"' to select eos build path")
+        print("or USE --cleos, --nodeos, --keosd to select eos programs")
+        sys.exit(1)
+
+    if args.cleos is "":
+        args.cleos = root_path + "/programs/cleos/cleos "
+
+    if args.nodeos is "":
+        args.nodeos = root_path + "/programs/nodeos/nodeos "
+
+    if args.keosd is "":
+        args.keosd = root_path + "/programs/keosd/keosd "
+
+    args.cleos += '--wallet-url http://127.0.0.1:6666 --url http://127.0.0.1:%d ' % args.http_port
+
 for (flag, command, function, inAll, help) in commands:
     prefix = ''
     if inAll: prefix += '*'
@@ -395,11 +426,9 @@ for (flag, command, function, inAll, help) in commands:
         parser.add_argument('--' + command, action='store_true', help=help, dest=command)
         
 args = parser.parse_args()
-
-args.cleos += '--url http://127.0.0.1:%d ' % args.http_port
+processPath(args)
 
 logFile = open(args.log_path, 'a')
-
 logFile.write('\n\n' + '*' * 80 + '\n\n\n')
 
 with open('accounts.json') as f:
