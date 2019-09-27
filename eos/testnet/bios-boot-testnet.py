@@ -91,16 +91,6 @@ def importKeys():
             keys[key] = True
             run(args.cleos + 'wallet import --private-key ' + key)
 
-def remkNodeDir(nodeIndex, account):
-    dir = args.nodes_dir + ('%02d-' % nodeIndex) + account['name'] + '/'
-    run('rm -rf ' + dir)
-    run('mkdir -p ' + dir)
-    run('mkdir -p ' + dir + '/config/')
-
-def remkNodeDirs(b, e):
-    for i in range(b, e):
-        remkNodeDir(i - b + 1, accounts[i])
-
 def appendConfig( item, value, comment = '', isStr = False ):
     config = ''
     if not comment is '':
@@ -163,21 +153,32 @@ def startNode(nodeIndex, account):
 
     log_file = ('bp%02d_' % nodeIndex) + account['name'] + ".log"
 
-    is_add_history_plugin = (nodeIndex is 1) or (nodeIndex > 25)
-
-    with open(config_dir + '/config.ini', mode='w') as f:
-        f.write(mkNodeConfig(nodeIndex, account, is_add_history_plugin))
-
     cmd = (
         args.nodeos +
         ' --config-dir ' + config_dir +
         ' --genesis-json ' + genesis_dir +
         ' -d ' + data_dir)
 
-
     with open(dir + '../' + log_file, mode='w') as f:
         f.write(cmd + '\n\n')
     background(cmd + '    2>>' + dir + '../' + log_file)
+
+def remkNodeDir(nodeIndex, account):
+    dir = args.nodes_dir + ('%02d-' % nodeIndex) + account['name'] + '/'
+    run('rm -rf ' + dir)
+    run('mkdir -p ' + dir)
+    run('mkdir -p ' + dir + '/config/')
+
+    config_dir = os.path.abspath(dir) + '/config'
+    is_add_history_plugin = (nodeIndex is 1) or (nodeIndex > 25)
+
+    with open(config_dir + '/config.ini', mode='w') as f:
+        f.write(mkNodeConfig(nodeIndex, account, is_add_history_plugin))
+
+def remkNodeDirs(b, e):
+    for i in range(b, e):
+        remkNodeDir(i - b + 1, accounts[i])
+
 
 def startProducers(b, e):
     for i in range(b, e):
