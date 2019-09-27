@@ -163,8 +163,10 @@ def startNode(nodeIndex, account):
 
     log_file = ('bp%02d_' % nodeIndex) + account['name'] + ".log"
 
+    is_add_history_plugin = (nodeIndex is 1) or (nodeIndex > 25)
+
     with open(config_dir + '/config.ini', mode='w') as f:
-        f.write(mkNodeConfig(nodeIndex, account, True))
+        f.write(mkNodeConfig(nodeIndex, account, is_add_history_plugin))
 
     cmd = (
         args.nodeos +
