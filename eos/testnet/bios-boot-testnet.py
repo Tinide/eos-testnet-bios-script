@@ -444,9 +444,9 @@ parser.add_argument('-H', '--http-port', type=int, default=8000, metavar='', hel
 def processPath( args ):
     # process path
     root_path = ""
-    if (not os.environ["eosio_DIR"] is None) and (not os.environ["eosio_DIR"] is ""):
-        root_path = os.environ["eosio_DIR"]
-        print("eosio_DIR is ", root_path)
+    if (not os.environ["eosio_bin_DIR"] is None) and (not os.environ["eosio_bin_DIR"] is ""):
+        root_path = os.environ["eosio_bin_DIR"]
+        print("eosio_bin_DIR is ", root_path)
 
     if not (args.root is ""):
         root_path = args.root
@@ -454,18 +454,18 @@ def processPath( args ):
 
     if (root_path is "") and ((args.cleos is "") or (args.nodeos is "") or (args.keosd is "")):
         print("root path no select and --cleos, --nodeos, --keosd has no set")
-        print("USE --root or 'export eosio_DIR=\"/path/to/eos/build/\"' to select eos build path")
+        print("USE --root or 'export eosio_bin_DIR=\"/path/to/eos/build/bin/\"' to select eos build path")
         print("or USE --cleos, --nodeos, --keosd to select eos programs")
         sys.exit(1)
 
     if args.cleos is "":
-        args.cleos = root_path + "/programs/cleos/cleos "
+        args.cleos = root_path + "/cleos "
 
     if args.nodeos is "":
-        args.nodeos = root_path + "/programs/nodeos/nodeos "
+        args.nodeos = root_path + "/nodeos "
 
     if args.keosd is "":
-        args.keosd = root_path + "/programs/keosd/keosd "
+        args.keosd = root_path + "/keosd "
 
     args.cleos += '--wallet-url http://127.0.0.1:6666 --url http://127.0.0.1:%d ' % args.http_port
 
