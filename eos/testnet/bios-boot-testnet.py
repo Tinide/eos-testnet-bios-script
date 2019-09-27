@@ -91,47 +91,94 @@ def importKeys():
             keys[key] = True
             run(args.cleos + 'wallet import --private-key ' + key)
 
+def appendConfig( item, value, comment = '', isStr = False ):
+    config = ''
+    if not comment is '':
+        config += ('\n\n# %s\n' % (comment))
+
+    v = value
+    if isStr:
+        v = '\"' + v + '\"'
+    config += ('%s = %s\n' % (item, v))
+    return config
+
+def mkNodeConfig( nodeIndex, account, isHistory=False ):
+    config_opts = '# P2P Peers Configs'
+    config_opts += ''.join(list(map(lambda i: ('p2p-peer-address = 127.0.0.1:%d\n' % (9001 + (nodeIndex + i) % 21 )), range(8))))
+
+    agent_name = 'TestNode%s' % (nodeIndex)
+    if not account['name'] is '':
+        agent_name += '_'
+        agent_name += account['name']
+
+    config_opts += appendConfig('agent-name', agent_name)
+
+    config_opts += appendConfig('http-server-address', '0.0.0.0:%s' % (8000 + nodeIndex), 'Address')
+    config_opts += appendConfig('p2p-listen-endpoint', '0.0.0.0:%s' % (9000 + nodeIndex))
+
+    config_opts += appendConfig('plugin', 'eosio::http_plugin', 'Plugins Configs')
+    config_opts += appendConfig('plugin', 'eosio::chain_plugin')
+    config_opts += appendConfig('plugin', 'eosio::chain_api_plugin')
+    config_opts += appendConfig('plugin', 'eosio::producer_plugin')
+    config_opts += appendConfig('plugin', 'eosio::producer_api_plugin')
+
+    config_opts += appendConfig('http-validate-host', 'false', 'Test Configs')
+    config_opts += appendConfig('verbose-http-errors', 'true')
+    config_opts += appendConfig('abi-serializer-max-time-ms', '5000')
+    config_opts += appendConfig('access-control-allow-origin', '*')
+    config_opts += appendConfig('access-control-allow-headers', 'Origin, X-Requested-With, Content-Type, Accept')
+    config_opts += appendConfig('wasm-runtime', 'wabt')
+    config_opts += appendConfig('p2p-max-nodes-per-host', '64')
+    config_opts += appendConfig('contracts-console', 'true')
+    config_opts += appendConfig('chain-state-db-size-mb', '4096')
+    config_opts += appendConfig('max-clients', str(maxClients))
+    config_opts += appendConfig('enable-stale-production', 'true')
+
+    if not account['name'] is '':
+        config_opts += appendConfig('producer-name ', account['name'], 'Block Producer Configs')
+        config_opts += appendConfig('signature-provider', ( '%s=KEY:%s' % (account['pub'], account['pvt']) ))
+
+    if isHistory:
+        config_opts += appendConfig('plugin', 'eosio::history_plugin', 'History Configs')
+        config_opts += appendConfig('plugin', 'eosio::history_api_plugin')
+        config_opts += appendConfig('filter-on', '*')
+    
+    return config_opts
+
+def startNode(nodeIndex, account):
+    dir = args.nodes_dir + ('%02d-' % nodeIndex) + account['name'] + '/'
+    config_dir = os.path.abspath(dir) + '/config'
+    data_dir = os.path.abspath(dir) + '/data'
+    genesis_dir = os.path.abspath(args.genesis)
+
+    log_file = ('bp%02d_' % nodeIndex) + account['name'] + ".log"
+
+    cmd = (
+        args.nodeos +
+        ' --config-dir ' + config_dir +
+        ' --genesis-json ' + genesis_dir +
+        ' -d ' + data_dir)
+
+    with open(dir + '../' + log_file, mode='w') as f:
+        f.write(cmd + '\n\n')
+    background(cmd + '    2>>' + dir + '../' + log_file)
+
 def remkNodeDir(nodeIndex, account):
     dir = args.nodes_dir + ('%02d-' % nodeIndex) + account['name'] + '/'
     run('rm -rf ' + dir)
     run('mkdir -p ' + dir)
+    run('mkdir -p ' + dir + '/config/')
+
+    config_dir = os.path.abspath(dir) + '/config'
+    is_add_history_plugin = (nodeIndex is 1) or (nodeIndex > 25)
+
+    with open(config_dir + '/config.ini', mode='w') as f:
+        f.write(mkNodeConfig(nodeIndex, account, is_add_history_plugin))
 
 def remkNodeDirs(b, e):
     for i in range(b, e):
         remkNodeDir(i - b + 1, accounts[i])
 
-def startNode(nodeIndex, account):
-    dir = args.nodes_dir + ('%02d-' % nodeIndex) + account['name'] + '/'
-    logFileName = ('bp%02d_' % nodeIndex) + account['name'] + ".log"
-    otherOpts = ''.join(list(map(lambda i: '    --p2p-peer-address localhost:' + str(9000 + i), range(nodeIndex))))
-    if not nodeIndex: otherOpts += (
-        '    --plugin eosio::history_plugin'
-        '    --plugin eosio::history_api_plugin'
-    )
-    cmd = (
-        args.nodeos +
-        '    --max-irreversible-block-age -1'
-        '    --contracts-console'
-        '    --genesis-json ' + os.path.abspath(args.genesis) +
-        '    --blocks-dir ' + os.path.abspath(dir) + '/blocks'
-        '    --config-dir ' + os.path.abspath(dir) +
-        '    --data-dir ' + os.path.abspath(dir) +
-        '    --chain-state-db-size-mb 1024'
-        '    --http-server-address 0.0.0.0:' + str(8000 + nodeIndex) +
-        '    --p2p-listen-endpoint 0.0.0.0:' + str(9000 + nodeIndex) +
-        '    --max-clients ' + str(maxClients) +
-        '    --p2p-max-nodes-per-host ' + str(maxClients) +
-        '    --enable-stale-production'
-        '    --producer-name ' + account['name'] +
-        '    --private-key \'["' + account['pub'] + '","' + account['pvt'] + '"]\''
-        '    --plugin eosio::http_plugin'
-        '    --plugin eosio::chain_api_plugin'
-        '    --plugin eosio::producer_plugin'
-        '    --plugin eosio::producer_api_plugin' +
-        otherOpts)
-    with open(dir + '../' + logFileName, mode='w') as f:
-        f.write(cmd + '\n\n')
-    background(cmd + '    2>>' + dir + '../' + logFileName)
 
 def startProducers(b, e):
     for i in range(b, e):
@@ -397,9 +444,9 @@ parser.add_argument('-H', '--http-port', type=int, default=8000, metavar='', hel
 def processPath( args ):
     # process path
     root_path = ""
-    if (not os.environ["eosio_DIR"] is None) and (not os.environ["eosio_DIR"] is ""):
-        root_path = os.environ["eosio_DIR"]
-        print("eosio_DIR is ", root_path)
+    if (not os.environ["eosio_bin_DIR"] is None) and (not os.environ["eosio_bin_DIR"] is ""):
+        root_path = os.environ["eosio_bin_DIR"]
+        print("eosio_bin_DIR is ", root_path)
 
     if not (args.root is ""):
         root_path = args.root
@@ -407,18 +454,18 @@ def processPath( args ):
 
     if (root_path is "") and ((args.cleos is "") or (args.nodeos is "") or (args.keosd is "")):
         print("root path no select and --cleos, --nodeos, --keosd has no set")
-        print("USE --root or 'export eosio_DIR=\"/path/to/eos/build/\"' to select eos build path")
+        print("USE --root or 'export eosio_bin_DIR=\"/path/to/eos/build/bin/\"' to select eos build path")
         print("or USE --cleos, --nodeos, --keosd to select eos programs")
         sys.exit(1)
 
     if args.cleos is "":
-        args.cleos = root_path + "/programs/cleos/cleos "
+        args.cleos = root_path + "/cleos "
 
     if args.nodeos is "":
-        args.nodeos = root_path + "/programs/nodeos/nodeos "
+        args.nodeos = root_path + "/nodeos "
 
     if args.keosd is "":
-        args.keosd = root_path + "/programs/keosd/keosd "
+        args.keosd = root_path + "/keosd "
 
     args.cleos += '--wallet-url http://127.0.0.1:6666 --url http://127.0.0.1:%d ' % args.http_port
 
