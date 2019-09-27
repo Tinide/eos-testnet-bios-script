@@ -26,6 +26,7 @@ systemAccounts = [
     'eosio.stake',
     'eosio.token',
     'eosio.vpay',
+    'eosio.rex',
 ]
 
 def jsonArg(a):
@@ -125,7 +126,8 @@ def startNode(nodeIndex, account):
         '    --private-key \'["' + account['pub'] + '","' + account['pvt'] + '"]\''
         '    --plugin eosio::http_plugin'
         '    --plugin eosio::chain_api_plugin'
-        '    --plugin eosio::producer_plugin' +
+        '    --plugin eosio::producer_plugin'
+        '    --plugin eosio::producer_api_plugin' +
         otherOpts)
     with open(dir + '../' + logFileName, mode='w') as f:
         f.write(cmd + '\n\n')
@@ -293,6 +295,8 @@ def stepStartBoot():
     remkNodeDir(0, bootParams)
     startNode(0, bootParams)
     sleep(1.5)
+def stepActiveProtocolFeatures():
+    run('curl -X POST http://127.0.0.1:8000/v1/producer/schedule_protocol_feature_activations -d \'{"protocol_features_to_activate": ["0ec7e080177b2c02b278d5088611686b49d739925a92d9bfcacd7fc6b74053bd"]}\'')
 def stepInstallSystemContracts():
     run(args.cleos + 'set contract eosio.token ' + args.contracts_dir + '/eosio.token/')
     run(args.cleos + 'set contract eosio.msig ' + args.contracts_dir + '/eosio.msig/')
@@ -306,7 +310,7 @@ def stepSetSystemContract():
     sleep(1)
     run(args.cleos + 'push action eosio setpriv' + jsonArg(['eosio.msig', 1]) + '-p eosio@active')
 def stepInitSystemContract():
-    run(args.cleos + 'push action eosio init' + jsonArg(['0', '4,SYS']) + '-p eosio@active')
+    run(args.cleos + 'push action eosio init' + jsonArg(['0', '4,' + args.symbol]) + '-p eosio@active')
     sleep(1)
 def stepCreateStakedAccounts():
     createStakedAccounts(0, len(accounts))
@@ -346,6 +350,7 @@ commands = [
     ('w', 'wallet',             stepStartWallet,            True,    "Start keosd, create wallet, fill with keys"),
     ('b', 'boot',               stepStartBoot,              True,    "Start boot node"),
     ('s', 'sys',                createSystemAccounts,       True,    "Create system accounts (eosio.*)"),
+    ('f', 'features',           stepActiveProtocolFeatures, True,    "Activite polotools features"),
     ('c', 'contracts',          stepInstallSystemContracts, True,    "Install system contracts (token, msig)"),
     ('t', 'tokens',             stepCreateTokens,           True,    "Create tokens"),
     ('S', 'sys-contract',       stepSetSystemContract,      True,    "Set system contract"),
